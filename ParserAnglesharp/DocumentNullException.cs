@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace ParserAnglesharp
+namespace ToysRuParser
 {
 	[Serializable]
 	internal class DocumentNullException : Exception

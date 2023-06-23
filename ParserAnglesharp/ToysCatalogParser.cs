@@ -1,49 +1,70 @@
 ﻿using AngleSharp;
 using AngleSharp.Dom;
 using CsvHelper;
-using Microsoft.VisualBasic;
 using System.Globalization;
 
-namespace ParserAnglesharp
+namespace ToysRuParser
 {
 	public class ToysCatalogParser
 	{
 
+		private const string _main = ".row";
 		private const string _name = ".detail-name";
 		private const string _price = ".price";
 		private const string _oldPrice = ".old-price";
 		private const string _available = ".net-v-nalichii";
 		private const string _breadcrumbItems = "a.breadcrumb-item";
+		private const string _toyLink = "meta";
 
-
-		public async Task Parse()
+		public async Task Parse(string catalogLink)
 		{
 			var config = Configuration.Default.WithDefaultLoader();
 			using var context = BrowsingContext.New(config);
 
-			var url = "https://www.toy.ru/catalog/toys-spetstekhnika/wow_wee_5569_power_treads_vezdekhod_s_avtotrekom/";
+			string? [] links = await GetProductLinks(catalogLink, context);
 
-			using var doc = await context.OpenAsync(url);
-			Product toy = ParseProduct(doc);
+			List<Product> products = new ();
+			foreach (var link in links)
+			{
+				using var doc = await context.OpenAsync(link);
+				products.Add(ParseProduct(doc));
+			}		
 
-			await RecordCSV(new List<Product>() {toy});
+			await RecordCSV(products);
 		}
 
 
+		private async Task<string?[]> GetProductLinks(string catalogLink, IBrowsingContext context) {
+
+			using var doc = await context.OpenAsync(catalogLink);
+			var productImages = doc.QuerySelectorAll(_toyLink);
+
+			var productsLinks = productImages.
+				Where(s => s.GetAttribute("itemprop") == "url").
+				Select(g => g.GetAttribute("content")).
+				ToArray();
+
+			return productsLinks;
+		}
+
+		private static int _count = 0;
 		private Product ParseProduct(IDocument? doc) {
 
 			if (doc is null)
 				throw new DocumentNullException();
 
+			var pdoductDoc = doc.QuerySelector(_main);
+			string title = pdoductDoc.QuerySelector(_name).TextContent;
 			Product product = new()
 			{
-				Title = doc.QuerySelector(_name).TextContent,
-				CurrentPrice = Convert.ToDecimal(doc.QuerySelector(_price).TextContent),
-				OldPrice = Convert.ToDecimal(doc.QuerySelector(_oldPrice).GetAttribute("content")),
+				Title = pdoductDoc.QuerySelector(_name).TextContent,
+				CurrentPrice = Convert.ToDecimal(pdoductDoc.QuerySelector(_price).TextContent),
+				OldPrice = Convert.ToDecimal(pdoductDoc.QuerySelector(_oldPrice).GetAttribute("content")),
 				IsAvailable = ChekingToyAvailible(doc),
 				Breadcrumbs = ExtractBreadcrumb(doc),
 			};
 
+			Console.WriteLine($"Продукт спарсен {_count++}");
 			return product;
 
 		}

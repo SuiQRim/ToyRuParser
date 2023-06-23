@@ -1,7 +1,5 @@
-﻿using AngleSharp;
-using AngleSharp.Dom;
-using ParserAnglesharp;
+﻿using ToysRuParser;
 
 ToysCatalogParser toyParser = new ToysCatalogParser();
 
-await toyParser.Parse();
+await toyParser.Parse("https://www.toy.ru/catalog/boy_transport/");

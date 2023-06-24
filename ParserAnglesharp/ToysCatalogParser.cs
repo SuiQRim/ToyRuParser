@@ -2,13 +2,14 @@
 using AngleSharp.Dom;
 using CsvHelper;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace ToysRuParser
 {
 	public class ToysCatalogParser
 	{
 
-		private const string _main = ".row";
+		private const string _product = "main .container";
 		private const string _name = ".detail-name";
 		private const string _price = ".price";
 		private const string _oldPrice = ".old-price";
@@ -21,22 +22,30 @@ namespace ToysRuParser
 			var config = Configuration.Default.WithDefaultLoader();
 			using var context = BrowsingContext.New(config);
 
-			string? [] links = await GetProductLinks(catalogLink, context);
+			using var catalogDoc = await context.OpenAsync(catalogLink);
+			string? [] links = GetProductLinks(catalogDoc);
 
 			List<Product> products = new ();
 			foreach (var link in links)
 			{
-				using var doc = await context.OpenAsync(link);
-				products.Add(ParseProduct(doc));
+				using var doc = await context.OpenAsync(link) ?? throw new DocumentNullException();
+
+				var mainDoc = doc.QuerySelector(_product);
+
+				products.Add(ParseProduct(mainDoc));
 			}		
 
 			await RecordCSV(products);
 		}
 
+		/// <summary>
+		/// Собирает все ссылки на страницы с продуктами
+		/// </summary>
+		/// <param name="catalogLink">Ссылка на раздел в каталоге</param>
+		/// <param name="context"></param>
+		/// <returns></returns>
+		private string?[] GetProductLinks(IDocument doc) {
 
-		private async Task<string?[]> GetProductLinks(string catalogLink, IBrowsingContext context) {
-
-			using var doc = await context.OpenAsync(catalogLink);
 			var productImages = doc.QuerySelectorAll(_toyLink);
 
 			var productsLinks = productImages.
@@ -48,35 +57,88 @@ namespace ToysRuParser
 		}
 
 		private static int _count = 0;
-		private Product ParseProduct(IDocument? doc) {
+		/// <summary>
+		/// Парсит документ с продуктом
+		/// </summary>
+		/// <param name="doc"></param>
+		/// <returns></returns>
+		/// <exception cref="DocumentNullException"></exception>
+		private Product ParseProduct(IElement? doc) {
 
 			if (doc is null)
 				throw new DocumentNullException();
 
-			var pdoductDoc = doc.QuerySelector(_main);
-			string title = pdoductDoc.QuerySelector(_name).TextContent;
+			string title = doc.QuerySelector(_name).TextContent;
+
+			// С текущей ценой проблем не должно быть, а старой цены может не быть
+			// Поэтому в случае, если исключение, которое возникает если не найдено значение
+			// Присваиваем текущую цену	
+			decimal price = ExtractPrices(doc, _price);
+			decimal oldPrice;
+			try
+			{
+				oldPrice = ExtractPrices(doc, _oldPrice);
+			}
+			catch (FormatException)
+			{
+				oldPrice = price;
+			}		
+
+
+			//Создаем сам объект
 			Product product = new()
 			{
-				Title = pdoductDoc.QuerySelector(_name).TextContent,
-				CurrentPrice = Convert.ToDecimal(pdoductDoc.QuerySelector(_price).TextContent),
-				OldPrice = Convert.ToDecimal(pdoductDoc.QuerySelector(_oldPrice).GetAttribute("content")),
+				Title = title,
+				CurrentPrice = price,
+				OldPrice = oldPrice,
 				IsAvailable = ChekingToyAvailible(doc),
 				Breadcrumbs = ExtractBreadcrumb(doc),
 			};
 
-			Console.WriteLine($"Продукт спарсен {_count++}");
+			Console.WriteLine(_count++);
 			return product;
 
 		}
 
-
-		private bool ChekingToyAvailible(IDocument doc)
+		/// <summary>
+		/// Находит цену
+		/// </summary>
+		/// <param name="doc"></param>
+		/// <param name="className"></param>
+		/// <returns></returns>
+		/// <exception cref="FormatException">Цена не найдена</exception>
+		private decimal ExtractPrices(IElement doc, string className)
 		{
-			IElement? availible = doc.QuerySelector(_available);
-			return availible is not null;
+			string price = doc.QuerySelector(className).TextContent;
+
+			// С помощью LINQ и регулярных выражений получаем только числа из строки
+			price = string.Join(string.Empty, Regex.Matches(price, @"\d+").OfType<Match>().Select(m => m.Value));
+
+			if (string.IsNullOrEmpty(price))
+				throw new FormatException($"Price tag with class name '{className} is not found'");
+
+			return Convert.ToDecimal(price, new CultureInfo("en-US"));
 		}
 
-		private string ExtractBreadcrumb(IDocument doc) {
+		/// <summary>
+		/// Ищет наличие товара и возвращает булевое значение
+		/// </summary>
+		/// <param name="doc"></param>
+		/// <returns></returns>
+		private bool ChekingToyAvailible(IElement doc)
+		{
+			// Я решил что лучше искать наличие по его отсутсвию, поэтому идет поиск 
+			// по html тегу, который появляется если товар отсутсвует
+			IElement? availible = doc.QuerySelector(_available);
+			return availible is null;
+		}
+
+		/// <summary>
+		/// Находит "хлебные крошки" в документе
+		/// </summary>
+		/// <param name="doc"></param>
+		/// <returns></returns>
+		private string ExtractBreadcrumb(IElement doc) {
 
 			//Находим все заголовки разделов
 			//С помозью LINQ получаем массив значений и потом объединяем разделяя все нуным знаком
@@ -87,12 +149,16 @@ namespace ToysRuParser
 			return string.Join(" > ", titles) /* + " > " + doc.QuerySelector(_name).TextContent  */; 
 		}
 
-		
-		private async Task RecordCSV(List<Product> toys) {
+		/// <summary>
+		/// Записывает товары в csv файл
+		/// </summary>
+		/// <param name="Product"></param>
+		/// <returns></returns>
+		private async Task RecordCSV(List<Product> Product) {
 
 			using var writer = new StreamWriter("Toy.csv");
 			using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-			await csv.WriteRecordsAsync(toys);
+			await csv.WriteRecordsAsync(Product);
 		}
 	};
 }

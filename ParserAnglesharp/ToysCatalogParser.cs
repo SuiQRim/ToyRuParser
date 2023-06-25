@@ -10,8 +10,7 @@ namespace ToysRuParser
 {
     public class ToysCatalogParser
 	{
-		// Здесь значение 8 для удобства для разработки, а так будет Environment.ProcessorCount
-		private int _threadCount = 4;
+		private readonly int _threadCount = Environment.ProcessorCount;
 		private const string _product = "main .container";
 		private const string _toyLink = "meta";
 
@@ -30,10 +29,10 @@ namespace ToysRuParser
 			//Ссылки на сайты которые нужно спарсить
 			string? [] links = GetProductLinks(catalogDoc);
 
-			//Для дебага: Ограничиваю до 16 ссылок чтобы удобнее дебажить
-			Array.Resize(ref links, 11);
+			//Для дебага: Ограничиваю чтобы удобнее дебажить
+			Array.Resize(ref links, 4);
 
-		
+			
 			int linkPerThread = links.Length / (_threadCount);
 			int lastLinkPool = links.Length % (_threadCount);
 
@@ -45,13 +44,16 @@ namespace ToysRuParser
 			Console.WriteLine("\nКол-во ссылок на последний поток " + lastLinkPool);
 			#endregion
 
-			// TODO: Поток, который будет заниматся остаточными страницами
-
-			// TODO: Предусмотреть ситуацию когда потоков больше, чем страниц
-
 			// TODO: Чтение страниц пагинации
 
 			int threadCount = _threadCount;
+
+			if (linkPerThread == 0)
+			{
+				threadCount = lastLinkPool;
+				linkPerThread = 1;
+				lastLinkPool = 0;
+			}
 
 			if (lastLinkPool != 0)
 				threadCount++;

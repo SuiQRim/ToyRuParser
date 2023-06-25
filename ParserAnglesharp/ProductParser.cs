@@ -1,0 +1,112 @@
+﻿using AngleSharp.Dom;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using ToysRuParser.Exceptions;
+
+namespace ToysRuParser
+{
+	internal static class ProductParser
+	{
+		private const string _name = ".detail-name";
+		private const string _price = ".price";
+		private const string _oldPrice = ".old-price";
+		private const string _available = ".net-v-nalichii";
+		private const string _breadcrumbItems = "a.breadcrumb-item";
+
+		private static int _count = 0;
+		public static Product Parse(IElement? doc)
+		{
+
+			if (doc is null)
+				throw new DocumentNullException();
+
+
+			// С текущей ценой проблем не должно быть, а старой цены может не быть
+			// Поэтому в случае, если исключение, которое возникает если не найдено значение
+			// Присваиваем текущую цену	
+			decimal price = ExtractPrices(doc, _price);
+			decimal oldPrice;
+			try
+			{
+				oldPrice = ExtractPrices(doc, _oldPrice);
+			}
+			catch (FormatException)
+			{
+				oldPrice = price;
+			}
+
+			//Создаем сам объект
+			Product product = new()
+			{
+				Title = ExtractTitle(doc),
+				CurrentPrice = price,
+				OldPrice = oldPrice,
+				IsAvailable = ChekingToyAvailible(doc),
+				Breadcrumbs = ExtractBreadcrumb(doc),
+			};
+
+			Console.WriteLine($"Спарсили {_count++}");
+			return product;
+
+		}
+
+		private static string ExtractTitle(IElement doc)
+		{
+			IElement titleMarkup = doc.QuerySelector(_name) ??
+				throw new KeyNotFoundException("Title of product is not Found");
+			return titleMarkup.TextContent;
+
+		}
+		/// <summary>
+		/// Находит цену
+		/// </summary>
+		/// <param name="doc"></param>
+		/// <param name="className"></param>
+		/// <returns></returns>
+		/// <exception cref="FormatException">Цена не найдена</exception>
+		private static decimal ExtractPrices(IElement doc, string className)
+		{
+			IElement? priceMarkup = doc.QuerySelector(className) ??
+				throw new KeyNotFoundException("Product price with className {} is not found");
+			string price = priceMarkup.TextContent;
+
+			// С помощью LINQ и регулярных выражений получаем только числа из строки
+			price = string.Join(string.Empty, Regex.Matches(price, @"\d+").OfType<Match>().Select(m => m.Value));
+
+			if (string.IsNullOrEmpty(price))
+				throw new FormatException($"Price tag with class name '{className} is not found'");
+
+			return Convert.ToDecimal(price, new CultureInfo("en-US"));
+		}
+
+		/// <summary>
+		/// Ищет наличие товара и возвращает булевое значение
+		/// </summary>
+		/// <param name="doc"></param>
+		/// <returns></returns>
+		private static bool ChekingToyAvailible(IElement doc)
+		{
+			// Я решил что лучше искать наличие по его отсутсвию, поэтому идет поиск 
+			// по html тегу, который появляется если товар отсутсвует
+			IElement? availible = doc.QuerySelector(_available);
+			return availible is null;
+		}
+
+		/// <summary>
+		/// Находит "хлебные крошки" в документе
+		/// </summary>
+		/// <param name="doc"></param>
+		/// <returns></returns>
+		private static string ExtractBreadcrumb(IElement doc)
+		{
+
+			//Находим все заголовки разделов
+			//С помозью LINQ получаем массив значений и потом объединяем разделяя все нуным знаком
+			//добавляем в конце название товара (не уверен что название товара так нужно поэтому закоментировал)
+
+			var breadcrumb = doc.QuerySelectorAll(_breadcrumbItems);
+			string?[] titles = breadcrumb.Select(s => s.GetAttribute("title")).ToArray();
+			return string.Join(" > ", titles) /* + " > " + doc.QuerySelector(_name).TextContent  */;
+		}
+	}
+}

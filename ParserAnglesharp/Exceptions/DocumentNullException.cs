@@ -1,24 +1,24 @@
 ﻿using System.Runtime.Serialization;
 
-namespace ToysRuParser
+namespace ToysRuParser.Exceptions
 {
-	[Serializable]
-	internal class DocumentNullException : Exception
-	{
-		public DocumentNullException() : base("Html страница не загрузилась. Документ пуст.")
-		{
-		}
+    [Serializable]
+    internal class DocumentNullException : Exception
+    {
+        public DocumentNullException() : base("Html страница не загрузилась. Документ пуст.")
+        {
+        }
 
-		public DocumentNullException(string? message) : base(message)
-		{
-		}
+        public DocumentNullException(string? message) : base(message)
+        {
+        }
 
-		public DocumentNullException(string? message, Exception? innerException) : base(message, innerException)
-		{
-		}
+        public DocumentNullException(string? message, Exception? innerException) : base(message, innerException)
+        {
+        }
 
-		protected DocumentNullException(SerializationInfo info, StreamingContext context) : base(info, context)
-		{
-		}
-	}
+        protected DocumentNullException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+        }
+    }
 }

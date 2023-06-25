@@ -29,14 +29,12 @@ namespace ToysRuParser
 			using var catalogDoc = await _context.OpenAsync(_setting.Link)
 				?? throw new DocumentNullException("Страница каталога не загрузилась");
 
-			var a = GetPagesCount(catalogDoc);
-			//Ссылки на сайты которые нужно спарсить
-			string? [] links = GetProductsLinksFromPaginator(a);
-			links = await CombineProductsFromPages(links);
+			var chapterCount = GetChapterCount(catalogDoc);
+			Print($"Собираю ссылки с {chapterCount} разделов");
 
-			//Для дебага: Ограничиваю чтобы удобнее дебажить
+			string? [] links = GetProductLinksFromChapters(chapterCount);
+			links = await CombineChaptersProducts(links);
 
-			// TODO: Чтение страниц пагинации
 
 			int linkPerThread = links.Length / (_threadCount);
 			int lastLinkPool = links.Length % (_threadCount);
@@ -51,12 +49,10 @@ namespace ToysRuParser
 			}
 
 
-			#if DEBUG
-			Console.WriteLine("\nПотоков " + _threadCount);
-			Console.WriteLine("\nКол-во ссылок " + _threadCount);
-			Console.WriteLine("\nКол-во ссылок на один поток " + linkPerThread);
-			Console.WriteLine("\nКол-во ссылок на последний поток " + lastLinkPool);
-			#endif
+			Print("\nПотоков " + _threadCount +
+				"\nКол-во товаров " + links.Length +
+				"\nКол-во товаров на один поток " + linkPerThread +
+				"\nКол-во товаров на последний поток " + lastLinkPool);
 
 			// Если есть остаточные страницы, нужно добавить для них свой поток
 			if (lastLinkPool != 0)
@@ -77,6 +73,8 @@ namespace ToysRuParser
 
 			Task.WaitAll(threads);
 			await RecordCSV(products);
+
+			Print("Парсинг выполнен");
 		}
 
 
@@ -103,7 +101,7 @@ namespace ToysRuParser
 			}
 		}
 
-		private string[] GetProductsLinksFromPaginator(int paginatorMaxPage) {
+		private string[] GetProductLinksFromChapters(int paginatorMaxPage) {
 
 			string[] links = new string[paginatorMaxPage];
 			for (int i = 0; i < paginatorMaxPage; i++)
@@ -113,7 +111,7 @@ namespace ToysRuParser
 			return links;
 		}
 
-		private static int GetPagesCount(IDocument doc)
+		private static int GetChapterCount(IDocument doc)
 		{
 			IEnumerable<IElement> a = doc.QuerySelectorAll(_pagination);
 			string? pagesCount = a.ElementAt(a.Count() - 2).TextContent;
@@ -125,11 +123,13 @@ namespace ToysRuParser
 			return Convert.ToInt32(pagesCount);
 		}
 
-		private async Task<string?[]> CombineProductsFromPages(string [] linkToPages)
+		private async Task<string?[]> CombineChaptersProducts(string? [] linkToPages)
 		{
 			string?[] links = Array.Empty<string>();
-			foreach (string link in linkToPages)
+			foreach (string? link in linkToPages)
 			{
+				if (string.IsNullOrEmpty(link))
+					throw new ArgumentException("Link cannot be null or Empty");
 				Console.WriteLine(link);
 				IDocument doc = await _context.OpenAsync(link);
 				string?[] linksToProducts = GetProductsLinks(doc);
@@ -164,7 +164,6 @@ namespace ToysRuParser
 			return doc.QuerySelector(_product) ?? throw new ProductNotFountException();
 		}
 
-
 		/// <summary>
 		/// Записывает товары в csv файл
 		/// </summary>
@@ -172,9 +171,17 @@ namespace ToysRuParser
 		/// <returns></returns>
 		private static async Task RecordCSV(IEnumerable<Product> products) {
 
+			Print("Записываю в csv файл");
 			using var writer = new StreamWriter("Toy.csv");
 			using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
 			await csv.WriteRecordsAsync(products);
+		}
+
+		private static void Print(string message) {
+		
+			Console.ForegroundColor = ConsoleColor.Green;
+			Console.WriteLine(message);
+			Console.ForegroundColor = ConsoleColor.White;
 		}
 	};
 }

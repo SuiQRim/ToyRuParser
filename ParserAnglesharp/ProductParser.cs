@@ -41,7 +41,7 @@ namespace ToysRuParser
 				Title = ExtractTitle(doc),
 				CurrentPrice = price,
 				OldPrice = oldPrice,
-				IsAvailable = ChekingToyAvailible(doc),
+				IsAvailable = CheckingToyAvailable(doc),
 				Breadcrumbs = ExtractBreadcrumb(doc),
 			};
 
@@ -84,12 +84,12 @@ namespace ToysRuParser
 		/// </summary>
 		/// <param name="doc"></param>
 		/// <returns></returns>
-		private static bool ChekingToyAvailible(IElement doc)
+		private static bool CheckingToyAvailable(IElement doc)
 		{
-			// Я решил что лучше искать наличие по его отсутсвию, поэтому идет поиск 
-			// по html тегу, который появляется если товар отсутсвует
-			IElement? availible = doc.QuerySelector(_available);
-			return availible is null;
+			// Я решил что лучше искать наличие по его отсутствует, поэтому идет поиск 
+			// по html тегу, который появляется если товар отсутствует
+			IElement? available = doc.QuerySelector(_available);
+			return available is null;
 		}
 
 		/// <summary>
@@ -101,8 +101,8 @@ namespace ToysRuParser
 		{
 
 			//Находим все заголовки разделов
-			//С помозью LINQ получаем массив значений и потом объединяем разделяя все нуным знаком
-			//добавляем в конце название товара (не уверен что название товара так нужно поэтому закоментировал)
+			//С помощью LINQ получаем массив значений и потом объединяем разделяя все нужным знаком
+			//добавляем в конце название товара (не уверен что название товара так нужно поэтому закомментировал)
 
 			var breadcrumb = doc.QuerySelectorAll(_breadcrumbItems);
 			string?[] titles = breadcrumb.Select(s => s.GetAttribute("title")).ToArray();

@@ -32,29 +32,28 @@ namespace ToysRuParser
 			//Для дебага: Ограничиваю чтобы удобнее дебажить
 			Array.Resize(ref links, 4);
 
-			
-			int linkPerThread = links.Length / (_threadCount);
-			int lastLinkPool = links.Length % (_threadCount);
-
-			#region ForDebug
-			//Для дебага: Выводим всякие данные в консоль
-			Console.WriteLine("\nПотоков " + _threadCount);
-			Console.WriteLine("\nКол-во ссылок " + _threadCount);
-			Console.WriteLine("\nКол-во ссылок на один поток " + linkPerThread);
-			Console.WriteLine("\nКол-во ссылок на последний поток " + lastLinkPool);
-			#endregion
-
 			// TODO: Чтение страниц пагинации
 
+			int linkPerThread = links.Length / (_threadCount);
+			int lastLinkPool = links.Length % (_threadCount);
 			int threadCount = _threadCount;
-
 			if (linkPerThread == 0)
 			{
+				// Если ссылок на потоков 0, то значит что при разделении оказалось что потоков в процессоре больше
+				// Значит мы можем для каждой страницы предоставить свой поток, а остаток убрать
 				threadCount = lastLinkPool;
 				linkPerThread = 1;
 				lastLinkPool = 0;
 			}
 
+			#if DEBUG
+			Console.WriteLine("\nПотоков " + _threadCount);
+			Console.WriteLine("\nКол-во ссылок " + _threadCount);
+			Console.WriteLine("\nКол-во ссылок на один поток " + linkPerThread);
+			Console.WriteLine("\nКол-во ссылок на последний поток " + lastLinkPool);
+			#endif
+
+			// Если есть остаточные страницы, нужно добавить для них свой поток
 			if (lastLinkPool != 0)
 				threadCount++;
 
@@ -67,11 +66,12 @@ namespace ToysRuParser
 				threads[streamCount++] = ProductPoolParser(i, linkPerThread, links, products);
 			}
 
+			// Остаточные страницы
 			if (lastLinkPool != 0)
 				threads[^1] = ProductPoolParser(links.Length, lastLinkPool, links, products);
 
 			Task.WaitAll(threads);
-			await RecordCSV(products.ToList());
+			await RecordCSV(products);
 		}
 
 
@@ -120,11 +120,11 @@ namespace ToysRuParser
 		/// </summary>
 		/// <param name="Product"></param>
 		/// <returns></returns>
-		private static async Task RecordCSV(List<Product> Product) {
+		private static async Task RecordCSV(IEnumerable<Product> products) {
 
 			using var writer = new StreamWriter("Toy.csv");
 			using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-			await csv.WriteRecordsAsync(Product);
+			await csv.WriteRecordsAsync(products);
 		}
 	};
 }

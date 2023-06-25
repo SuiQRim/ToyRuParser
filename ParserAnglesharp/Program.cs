@@ -1,5 +1,7 @@
 ﻿using ToysRuParser;
 
-ToysCatalogParser toyParser = new ();
+CatalogSetting cs = new("https://www.toy.ru/catalog/boy_transport");
+ToysCatalogParser toyParser = new (cs);
 
-await toyParser.Parse("https://www.toy.ru/catalog/boy_transport/");
+
+await toyParser.Parse();

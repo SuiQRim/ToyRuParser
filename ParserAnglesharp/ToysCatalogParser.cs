@@ -1,5 +1,4 @@
 ﻿using AngleSharp;
-using AngleSharp.Common;
 using AngleSharp.Dom;
 using CsvHelper;
 using System.Globalization;
@@ -13,24 +12,29 @@ namespace ToysRuParser
 		private readonly int _threadCount = Environment.ProcessorCount;
 		private const string _product = "main .container";
 		private const string _toyLink = "meta";
+		private const string _pagination = ".pagination.justify-content-between li";
 
-        public ToysCatalogParser()
+		public ToysCatalogParser(CatalogSetting cs)
         {
+			_setting = cs;
 			var config = Configuration.Default.WithDefaultLoader();
 			_context = BrowsingContext.New(config);
         }
 
         private readonly IBrowsingContext _context;
+		private readonly CatalogSetting _setting;
 
-		public async Task Parse(string catalogLink)
+		public async Task Parse()
 		{
-			using var catalogDoc = await _context.OpenAsync(catalogLink);
+			using var catalogDoc = await _context.OpenAsync(_setting.Link)
+				?? throw new DocumentNullException("Страница каталога не загрузилась");
 
+			var a = GetPagesCount(catalogDoc);
 			//Ссылки на сайты которые нужно спарсить
-			string? [] links = GetProductLinks(catalogDoc);
+			string? [] links = GetProductsLinksFromPaginator(a);
+			links = await CombineProductsFromPages(links);
 
 			//Для дебага: Ограничиваю чтобы удобнее дебажить
-			Array.Resize(ref links, 4);
 
 			// TODO: Чтение страниц пагинации
 
@@ -45,6 +49,7 @@ namespace ToysRuParser
 				linkPerThread = 1;
 				lastLinkPool = 0;
 			}
+
 
 			#if DEBUG
 			Console.WriteLine("\nПотоков " + _threadCount);
@@ -76,6 +81,15 @@ namespace ToysRuParser
 
 
 
+
+		/// <summary>
+		/// Выполняет парсинг своего диапазона страниц
+		/// </summary>
+		/// <param name="iterationRange">Диапазон страниц который нужно парсить</param>
+		/// <param name="linkPerThread">Кол-во страниц на один поток</param>
+		/// <param name="links">Страницы (их ссылки)</param>
+		/// <param name="products">Массив с спарсеными продуктами</param>
+		/// <returns></returns>
 		private async Task ProductPoolParser(int iterationRange, int linkPerThread, string?[] links, Product[] products) {
 
 			for (int i = 0; i < linkPerThread; i++)
@@ -86,9 +100,45 @@ namespace ToysRuParser
 				{
 					products[iterationRange - linkPerThread + i] = product;
 				}
-
 			}
 		}
+
+		private string[] GetProductsLinksFromPaginator(int paginatorMaxPage) {
+
+			string[] links = new string[paginatorMaxPage];
+			for (int i = 0; i < paginatorMaxPage; i++)
+			{
+				links[i] = _setting.GetParametrizeUrl(i + 1);
+			}
+			return links;
+		}
+
+		private static int GetPagesCount(IDocument doc)
+		{
+			IEnumerable<IElement> a = doc.QuerySelectorAll(_pagination);
+			string? pagesCount = a.ElementAt(a.Count() - 2).TextContent;
+
+			if (string.IsNullOrEmpty(pagesCount))
+				throw new KeyNotFoundException("Pagination numbering not found");
+			pagesCount = Regex.Replace(pagesCount, @"\t|\n|\r", "");
+
+			return Convert.ToInt32(pagesCount);
+		}
+
+		private async Task<string?[]> CombineProductsFromPages(string [] linkToPages)
+		{
+			string?[] links = Array.Empty<string>();
+			foreach (string link in linkToPages)
+			{
+				Console.WriteLine(link);
+				IDocument doc = await _context.OpenAsync(link);
+				string?[] linksToProducts = GetProductsLinks(doc);
+				links = links.Concat(linksToProducts).ToArray() ?? throw new Exception();
+			}
+
+			return links;
+		}
+
 
 		/// <summary>
 		/// Собирает все ссылки на страницы с продуктами
@@ -96,7 +146,7 @@ namespace ToysRuParser
 		/// <param name="catalogLink">Ссылка на раздел в каталоге</param>
 		/// <param name="context"></param>
 		/// <returns></returns>
-		private static string?[] GetProductLinks(IDocument doc) {
+		private static string?[] GetProductsLinks(IDocument doc) {
 
 			var productImages = doc.QuerySelectorAll(_toyLink);
 

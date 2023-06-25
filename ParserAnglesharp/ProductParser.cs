@@ -18,7 +18,7 @@ namespace ToysRuParser
 		{
 
 			if (doc is null)
-				throw new DocumentNullException();
+				throw new DocumentNullException("Страница продукта не загрузилась");
 
 
 			// С текущей ценой проблем не должно быть, а старой цены может не быть

@@ -11,7 +11,7 @@ namespace ToysRuParser
     public class ToysCatalogParser
 	{
 		// Здесь значение 8 для удобства для разработки, а так будет Environment.ProcessorCount
-		private int _threadCount = 8;
+		private int _threadCount = 4;
 		private const string _product = "main .container";
 		private const string _toyLink = "meta";
 
@@ -31,7 +31,7 @@ namespace ToysRuParser
 			string? [] links = GetProductLinks(catalogDoc);
 
 			//Для дебага: Ограничиваю до 16 ссылок чтобы удобнее дебажить
-			Array.Resize(ref links, 16);
+			Array.Resize(ref links, 11);
 
 		
 			int linkPerThread = links.Length / (_threadCount);
@@ -51,14 +51,22 @@ namespace ToysRuParser
 
 			// TODO: Чтение страниц пагинации
 
-			Task[] threads = new Task[_threadCount];
+			int threadCount = _threadCount;
+
+			if (lastLinkPool != 0)
+				threadCount++;
+
+			Task[] threads = new Task[threadCount];
 			Product [] products = new Product[links.Length];
 
-			int threadCount = 0;
+			int streamCount = 0;
 			for (int i = linkPerThread; i <= links.Length; i += linkPerThread)
 			{
-				threads[threadCount++] = ProductPoolParser(i, linkPerThread, links, products);
+				threads[streamCount++] = ProductPoolParser(i, linkPerThread, links, products);
 			}
+
+			if (lastLinkPool != 0)
+				threads[^1] = ProductPoolParser(links.Length, lastLinkPool, links, products);
 
 			Task.WaitAll(threads);
 			await RecordCSV(products.ToList());

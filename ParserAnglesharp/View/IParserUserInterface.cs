@@ -10,7 +10,7 @@ namespace ToysRuParser.View
 		void PrintProduct(Product product);
 
 		int ProductProgress{ get; }
-		int ProductCount { get; }
+		int ProductCount { get; set; }
 		void PrintProgressBar();
 
 	}

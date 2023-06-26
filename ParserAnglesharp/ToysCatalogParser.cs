@@ -38,6 +38,8 @@ namespace ToysRuParser
 			string? [] links = GetProductLinksFromChapters(chapterCount);
 			links = await CombineChaptersProducts(links);
 
+			_userInterface.ProductCount = links.Length;
+
 			Product [] products = new Product[links.Length];
 
 			for (int i = 0; i < products.Length; i++)

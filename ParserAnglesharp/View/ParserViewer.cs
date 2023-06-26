@@ -5,6 +5,9 @@ namespace ToysRuParser.View
 {
     public class ParserViewer : IParserUserInterface
 	{
+
+		private const char _progressBarSymbol = '█';
+
 		public int ProductProgress { get; set; }
 		public int ProductCount { get;  set; }
 
@@ -19,11 +22,12 @@ namespace ToysRuParser.View
 		}
 
 		private int _poductHeight;
+
+		private const int _marginHoriz = 10;
 		public void PrintProduct(Product product)
 		{
 			int indicator = 8;
 			int maxLeigth;
-			int marginHoriz = 10;
 
 			string title = "";
 			int length;
@@ -44,30 +48,30 @@ namespace ToysRuParser.View
 
 			indicator += 4;
 			
-			length = maxLeigth - (marginHoriz * 2);
+			length = maxLeigth - (_marginHoriz * 2);
 			lines = SplitIntoLines(product.Breadcrumbs, length, '|').Split('|');
-			Console.SetCursorPosition(marginHoriz, indicator);
+			Console.SetCursorPosition(_marginHoriz, indicator);
 			Console.Write(title);
-			PrintMultiLines(lines, marginHoriz + title.Length,indicator, '|');
+			PrintMultiLines(lines, _marginHoriz + title.Length,indicator, '|');
 
 			indicator += lines.Length + 2;
 
 
 			title = "Имя продукта: ";
-			length = maxLeigth - title.Length - (marginHoriz * 2);
+			length = maxLeigth - title.Length - (_marginHoriz * 2);
 			lines = SplitIntoLines(product.Title, length, '|').Split('|');
-			Console.SetCursorPosition(marginHoriz, indicator);
+			Console.SetCursorPosition(_marginHoriz, indicator);
 			Console.Write(title);
-			PrintMultiLines(lines, marginHoriz + title.Length, indicator, '|');
+			PrintMultiLines(lines, _marginHoriz + title.Length, indicator, '|');
 
 			indicator += lines.Length + 4;
 
 			if (product.OldPrice != product.CurrentPrice)
 			{
 				title = "Старая цена: ";
-				Console.SetCursorPosition(maxLeigth - title.Length - product.OldPrice.ToString().Length - marginHoriz, indicator);
+				Console.SetCursorPosition(maxLeigth - title.Length - product.OldPrice.ToString().Length - _marginHoriz, indicator);
 				Console.Write(title);
-				Console.ForegroundColor= ConsoleColor.Green;
+				Console.ForegroundColor= ConsoleColor.Green ;
 				Console.Write(product.OldPrice);
 				Console.ForegroundColor = ConsoleColor.White;
 
@@ -77,7 +81,7 @@ namespace ToysRuParser.View
 			
 
 			title = "Цена: ";
-			Console.SetCursorPosition(maxLeigth - title.Length - product.OldPrice.ToString().Length - marginHoriz, indicator);
+			Console.SetCursorPosition(maxLeigth - title.Length - product.OldPrice.ToString().Length - _marginHoriz, indicator);
 			Console.Write(title);
 			Console.ForegroundColor = ConsoleColor.Green;
 			Console.Write(product.CurrentPrice);
@@ -87,20 +91,38 @@ namespace ToysRuParser.View
 
 			string available = product.IsAvailable ? "В наличии" : "Нет в наличии";
 			ConsoleColor color = product.IsAvailable ? ConsoleColor.Green : ConsoleColor.Red;
-			Console.SetCursorPosition(maxLeigth - available.Length - marginHoriz, indicator);
+			Console.SetCursorPosition(maxLeigth - available.Length - _marginHoriz, indicator);
 			Console.ForegroundColor = color;
 			Console.Write(available);
 			Console.ForegroundColor = ConsoleColor.White;
 
 			ProductProgress++;
 			_poductHeight = indicator;
+			PrintProgressBar();
 		}
 
 
 
 		public void PrintProgressBar()
 		{
-			throw new NotImplementedException();
+			int indicator = _poductHeight + 4;
+
+			Console.ForegroundColor = ConsoleColor.Blue;
+
+			double ratio = 100d / ProductCount;
+			double progress = (int)(ratio * ProductProgress);
+
+			double symbolRatio = (double)(Console.WindowWidth - 1 - _marginHoriz) / ProductCount;
+			int symbolProgress = (int)(symbolRatio * ProductProgress);
+			
+			Console.SetCursorPosition(10, indicator);
+			Console.Write($"Прогресс... {progress}/100% | {ProductProgress}/{ProductCount}");
+
+			indicator++;
+
+			Console.SetCursorPosition(10, indicator);
+			Console.WriteLine("".PadRight(symbolProgress, _progressBarSymbol));
+			Console.ForegroundColor = ConsoleColor.White;
 		}
 		
 		private static string SplitIntoLines(string text, int lineMaxSize, char splitChar)

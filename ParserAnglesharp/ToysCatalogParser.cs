@@ -9,7 +9,6 @@ namespace ToysRuParser
 {
     public class ToysCatalogParser
 	{
-		private readonly int _threadCount = Environment.ProcessorCount;
 		private const string _product = "main .container";
 		private const string _toyLink = "meta";
 		private const string _pagination = ".pagination.justify-content-between li";
@@ -35,70 +34,17 @@ namespace ToysRuParser
 			string? [] links = GetProductLinksFromChapters(chapterCount);
 			links = await CombineChaptersProducts(links);
 
-
-			int linkPerThread = links.Length / (_threadCount);
-			int lastLinkPool = links.Length % (_threadCount);
-			int threadCount = _threadCount;
-			if (linkPerThread == 0)
-			{
-				// Если ссылок на потоков 0, то значит что при разделении оказалось что потоков в процессоре больше
-				// Значит мы можем для каждой страницы предоставить свой поток, а остаток убрать
-				threadCount = lastLinkPool;
-				linkPerThread = 1;
-				lastLinkPool = 0;
-			}
-
-
-			Print("\nПотоков " + _threadCount +
-				"\nКол-во товаров " + links.Length +
-				"\nКол-во товаров на один поток " + linkPerThread +
-				"\nКол-во товаров на последний поток " + lastLinkPool);
-
-			// Если есть остаточные страницы, нужно добавить для них свой поток
-			if (lastLinkPool != 0)
-				threadCount++;
-
-			Task[] threads = new Task[threadCount];
 			Product [] products = new Product[links.Length];
 
-			int streamCount = 0;
-			for (int i = linkPerThread; i <= links.Length; i += linkPerThread)
+			for (int i = 0; i < products.Length; i++)
 			{
-				threads[streamCount++] = ProductPoolParser(i, linkPerThread, links, products);
+				IElement catalogMarkup = await GetProductMarkup(links[i]);
+				Product product = ProductParser.Parse(catalogMarkup);
 			}
 
-			// Остаточные страницы
-			if (lastLinkPool != 0)
-				threads[^1] = ProductPoolParser(links.Length, lastLinkPool, links, products);
-
-			Task.WaitAll(threads);
 			await RecordCSV(products);
 
 			Print("Парсинг выполнен");
-		}
-
-
-
-
-		/// <summary>
-		/// Выполняет парсинг своего диапазона страниц
-		/// </summary>
-		/// <param name="iterationRange">Диапазон страниц который нужно парсить</param>
-		/// <param name="linkPerThread">Кол-во страниц на один поток</param>
-		/// <param name="links">Страницы (их ссылки)</param>
-		/// <param name="products">Массив с спарсеными продуктами</param>
-		/// <returns></returns>
-		private async Task ProductPoolParser(int iterationRange, int linkPerThread, string?[] links, Product[] products) {
-
-			for (int i = 0; i < linkPerThread; i++)
-			{
-				IElement catalogMarkup = await GetProductMarkup(links[iterationRange - linkPerThread + i]);	
-				Product product = ProductParser.Parse(catalogMarkup);
-				lock (products)
-				{
-					products[iterationRange - linkPerThread + i] = product;
-				}
-			}
 		}
 
 		private string[] GetProductLinksFromChapters(int paginatorMaxPage) {
@@ -114,6 +60,9 @@ namespace ToysRuParser
 		private static int GetChapterCount(IDocument doc)
 		{
 			IEnumerable<IElement> a = doc.QuerySelectorAll(_pagination);
+			if (a.Count() == 0)
+				return 1;
+			
 			string? pagesCount = a.ElementAt(a.Count() - 2).TextContent;
 
 			if (string.IsNullOrEmpty(pagesCount))

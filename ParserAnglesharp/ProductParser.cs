@@ -2,10 +2,11 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using ToysRuParser.Exceptions;
+using ToysRuParser.Models;
 
 namespace ToysRuParser
 {
-	internal static class ProductParser
+    internal static class ProductParser
 	{
 		private const string _name = ".detail-name";
 		private const string _price = ".price";
@@ -14,6 +15,7 @@ namespace ToysRuParser
 		private const string _breadcrumbItems = "a.breadcrumb-item";
 
 		private static int _count = 0;
+
 		public static Product Parse(IElement? doc)
 		{
 
@@ -38,14 +40,13 @@ namespace ToysRuParser
 			//Создаем сам объект
 			Product product = new()
 			{
+				LinkToProduct = doc.BaseUri,
 				Title = ExtractTitle(doc),
 				CurrentPrice = price,
 				OldPrice = oldPrice,
 				IsAvailable = CheckingToyAvailable(doc),
 				Breadcrumbs = ExtractBreadcrumb(doc),
 			};
-
-			Console.WriteLine($"Спарсили {_count++}");
 			return product;
 
 		}

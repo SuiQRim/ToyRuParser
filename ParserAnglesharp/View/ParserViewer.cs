@@ -5,8 +5,7 @@ namespace ToysRuParser.View
 {
     public class ParserViewer : IParserUserInterface
 	{
-
-		private const char _progressBarSymbol = '█';
+        private const char _progressBarSymbol = '█';
 
 		public int ProductProgress { get; set; }
 		public int ProductCount { get;  set; }
@@ -37,7 +36,7 @@ namespace ToysRuParser.View
 			
 			if (ProductProgress > 0) {
 				string a;
-				a = "".PadRight(maxLeigth * _poductHeight - indicator); 
+				a = "".PadRight(maxLeigth * Console.WindowHeight - indicator); 
 				Console.SetCursorPosition(0, indicator);
 				Console.WriteLine(a);
 			}
@@ -112,7 +111,7 @@ namespace ToysRuParser.View
 			double ratio = 100d / ProductCount;
 			double progress = (int)(ratio * ProductProgress);
 
-			double symbolRatio = (double)(Console.WindowWidth - 1 - _marginHoriz) / ProductCount;
+			double symbolRatio = (double)(Console.WindowWidth - 1 - _marginHoriz * 2) / ProductCount;
 			int symbolProgress = (int)(symbolRatio * ProductProgress);
 			
 			Console.SetCursorPosition(10, indicator);

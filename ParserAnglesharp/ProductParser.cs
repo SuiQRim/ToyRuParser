@@ -23,17 +23,24 @@ namespace ToysRuParser
 
 			// С текущей ценой проблем не должно быть, а старой цены может не быть
 			// Поэтому в случае, если исключение, которое возникает если не найдено значение
-			// Присваиваем текущую цену	
-			decimal price = ExtractPrices(doc, _price);
-			decimal oldPrice;
-			try
+			// Присваиваем текущую цену
+			//
+			bool isAvailable = CheckingToyAvailable(doc);
+			decimal price = default;
+			decimal oldPrice = default;
+			if (isAvailable)
 			{
-				oldPrice = ExtractPrices(doc, _oldPrice);
+				price = ExtractPrices(doc, _price);
+				try
+				{
+					oldPrice = ExtractPrices(doc, _oldPrice);
+				}
+				catch (FormatException)
+				{
+					oldPrice = price;
+				}
 			}
-			catch (FormatException)
-			{
-				oldPrice = price;
-			}
+		
 
 			//Создаем сам объект
 			Product product = new()
@@ -41,7 +48,7 @@ namespace ToysRuParser
 				Title = ExtractTitle(doc),
 				CurrentPrice = price,
 				OldPrice = oldPrice,
-				IsAvailable = CheckingToyAvailable(doc),
+				IsAvailable = isAvailable,
 				Breadcrumbs = ExtractBreadcrumb(doc),
 			};
 

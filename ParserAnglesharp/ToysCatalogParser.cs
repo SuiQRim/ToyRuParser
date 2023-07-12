@@ -48,11 +48,24 @@ namespace ToysRuParser
 				Product product = ProductParser.Parse(catalogMarkup);
 				_userInterface.PrintProduct(product);
 				products[i] = ProductParser.Parse(catalogMarkup);
+				Delay();
 			}
 
 			await RecordCSV(products);
 
 			Print("Парсинг выполнен");
+		}
+
+		/// <summary>
+		/// Создает искусственную задержку с погрешностью
+		/// </summary>
+		/// <param name="minDelaySecond">Основная задержка в секундах</param>
+		/// <param name="rateDelaySecond">Плавающая задержка прибавляющаяся к основной</param>
+		private static void Delay(int minDelaySecond = 3, int rateDelaySecond = 1)
+		{
+			int millisecondsRandomTimeOut = new Random().Next(rateDelaySecond * 1000);
+			int delay = (minDelaySecond * 1000) + millisecondsRandomTimeOut;
+			Thread.Sleep(delay);
 		}
 
 		private string[] GetProductLinksFromChapters(int paginatorMaxPage) {

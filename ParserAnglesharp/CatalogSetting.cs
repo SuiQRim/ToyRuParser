@@ -14,10 +14,9 @@
 
 		private const string _pageIndex = "PAGEN_5";
 
-		public string GetParametrizeUrl(int pageIndex) { 
+		public string GetParametrizeUrl(int pageIndex) {
 
-			return $"{Link}/?{_productCount}={_productCountValue}&{_pageIndex}={pageIndex}";
-
+			return Flurl.Url.Combine(Link, $"/?{_productCount}={_productCountValue}&{_pageIndex}={pageIndex}");
 		}
 	}
 }

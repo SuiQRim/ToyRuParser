@@ -4,6 +4,8 @@ using CsvHelper;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using ToysRuParser.Exceptions;
+using ToysRuParser.Models;
+using ToysRuParser.View;
 
 namespace ToysRuParser
 {
@@ -13,15 +15,17 @@ namespace ToysRuParser
 		private const string _toyLink = "meta";
 		private const string _pagination = ".pagination.justify-content-between li";
 
-		public ToysCatalogParser(CatalogSetting cs)
+		public ToysCatalogParser(CatalogSetting cs, IParserUserInterface? ui = null)
         {
 			_setting = cs;
 			var config = Configuration.Default.WithDefaultLoader();
 			_context = BrowsingContext.New(config);
+			_userInterface = ui ?? new ParserViewer();
         }
 
         private readonly IBrowsingContext _context;
 		private readonly CatalogSetting _setting;
+		private readonly IParserUserInterface _userInterface;
 
 		public async Task Parse()
 		{
@@ -34,11 +38,15 @@ namespace ToysRuParser
 			string? [] links = GetProductLinksFromChapters(chapterCount);
 			links = await CombineChaptersProducts(links);
 
+			_userInterface.ProductCount = links.Length;
+
 			Product [] products = new Product[links.Length];
 
 			for (int i = 0; i < products.Length; i++)
 			{
 				IElement catalogMarkup = await GetProductMarkup(links[i]);
+				Product product = ProductParser.Parse(catalogMarkup);
+				_userInterface.PrintProduct(product);
 				products[i] = ProductParser.Parse(catalogMarkup);
 			}
 

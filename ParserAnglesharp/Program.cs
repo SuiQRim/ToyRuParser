@@ -6,7 +6,7 @@ while (!isCorrect)
 {
 	Console.Clear();
 	Console.WriteLine("Введите полный адресс к разделу товаров с сайта toy.ru");
-	string url = Console.ReadLine();
+	string? url = Console.ReadLine();
 	isCorrect = Uri.TryCreate(url, UriKind.Absolute, out uri)
 		&& (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 	if (!isCorrect)

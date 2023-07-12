@@ -39,7 +39,7 @@ namespace ToysRuParser
 			for (int i = 0; i < products.Length; i++)
 			{
 				IElement catalogMarkup = await GetProductMarkup(links[i]);
-				Product product = ProductParser.Parse(catalogMarkup);
+				products[i] = ProductParser.Parse(catalogMarkup);
 			}
 
 			await RecordCSV(products);

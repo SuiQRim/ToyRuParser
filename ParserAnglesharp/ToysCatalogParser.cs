@@ -12,8 +12,8 @@ namespace ToysRuParser
     public class ToysCatalogParser
 	{
 		private const string _product = "main .container";
-		private const string _toyLink = "meta";
-		private const string _pagination = ".pagination.justify-content-between li";
+		private const string _toyLink = ".category-grid .row .card-preview meta";
+		private const string _pagination = ".pagination li";
 
 		public ToysCatalogParser(CatalogSetting cs, IParserUserInterface? ui = null)
         {
@@ -29,7 +29,7 @@ namespace ToysRuParser
 
 		public async Task Parse()
 		{
-			using var catalogDoc = await _context.OpenAsync(_setting.Link)
+			using var catalogDoc = await _context.OpenAsync(_setting.PaginateCountLink)
 				?? throw new DocumentNullException("Страница каталога не загрузилась");
 
 			var chapterCount = GetChapterCount(catalogDoc);
@@ -80,11 +80,13 @@ namespace ToysRuParser
 
 		private static int GetChapterCount(IDocument doc)
 		{
-			IEnumerable<IElement> a = doc.QuerySelectorAll(_pagination);
-			if (a.Count() == 0)
+			var paginationDoc = doc.QuerySelectorAll(_pagination);
+			IEnumerable<IElement> paginationElementCollection = paginationDoc;
+			if (paginationElementCollection.Count() == 0)
 				return 1;
 			
-			string? pagesCount = a.ElementAt(a.Count() - 2).TextContent;
+			string? pagesCount = paginationElementCollection.ElementAt(
+				paginationElementCollection.Count() - 2).TextContent;
 
 			if (string.IsNullOrEmpty(pagesCount))
 				throw new KeyNotFoundException("Pagination numbering not found");
@@ -131,7 +133,8 @@ namespace ToysRuParser
 		private async Task<IElement> GetProductMarkup(string link)
 		{
 			using var doc = await _context.OpenAsync(link) ?? throw new DocumentNullException();
-			return doc.QuerySelector(_product) ?? throw new ProductNotFountException();
+			IElement productDoc = doc.QuerySelector(_product) ?? throw new ProductNotFountException();
+			return productDoc;
 		}
 
 		/// <summary>

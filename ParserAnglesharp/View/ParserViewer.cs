@@ -88,13 +88,6 @@ namespace ToysRuParser.View
 
 			indicator += 2;
 
-			string available = product.IsAvailable ? "В наличии" : "Нет в наличии";
-			ConsoleColor color = product.IsAvailable ? ConsoleColor.Green : ConsoleColor.Red;
-			Console.SetCursorPosition(maxLeigth - available.Length - _marginHoriz, indicator);
-			Console.ForegroundColor = color;
-			Console.Write(available);
-			Console.ForegroundColor = ConsoleColor.White;
-
 			ProductProgress++;
 			_poductHeight = indicator;
 			PrintProgressBar();

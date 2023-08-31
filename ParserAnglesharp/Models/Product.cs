@@ -10,8 +10,6 @@
 
         public decimal OldPrice { get; set; }
 
-        public bool IsAvailable { get; set; }
-
         public string? LinkToProduct { get; set; }
 
         public string[]? LinksToImages { get; set; }

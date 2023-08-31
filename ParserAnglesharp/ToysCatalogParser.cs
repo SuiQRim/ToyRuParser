@@ -11,7 +11,7 @@ namespace ToysRuParser
 {
     public class ToysCatalogParser
 	{
-		private const string _product = "main .container";
+		private const string _product = ".main-block";
 		private const string _toyLink = ".category-grid .row .card-preview meta";
 		private const string _pagination = ".pagination li";
 

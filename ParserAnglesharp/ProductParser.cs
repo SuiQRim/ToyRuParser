@@ -8,10 +8,9 @@ namespace ToysRuParser
 {
     internal static class ProductParser
 	{
-		private const string _name = ".detail-name";
+		private const string _name = ".content-title";
 		private const string _price = ".price";
 		private const string _oldPrice = ".old-price";
-		private const string _available = ".net-v-nalichii";
 		private const string _breadcrumbItems = "a.breadcrumb-item";
 
 		public static Product Parse(IElement? doc)
@@ -25,22 +24,17 @@ namespace ToysRuParser
 			// Поэтому в случае, если исключение, которое возникает если не найдено значение
 			// Присваиваем текущую цену
 			//
-			bool isAvailable = CheckingToyAvailable(doc);
-			decimal price = default;
-			decimal oldPrice = default;
-			if (isAvailable)
+
+			decimal oldPrice;
+			decimal price = ExtractPrices(doc, _price);
+			try
 			{
-				price = ExtractPrices(doc, _price);
-				try
-				{
-					oldPrice = ExtractPrices(doc, _oldPrice);
-				}
-				catch (FormatException)
-				{
-					oldPrice = price;
-				}
+				oldPrice = ExtractPrices(doc, _oldPrice);
 			}
-		
+			catch (KeyNotFoundException)
+			{
+				oldPrice = price;
+			}
 
 			//Создаем сам объект
 			Product product = new()
@@ -49,7 +43,6 @@ namespace ToysRuParser
 				Title = ExtractTitle(doc),
 				CurrentPrice = price,
 				OldPrice = oldPrice,
-				IsAvailable = isAvailable,
 				Breadcrumbs = ExtractBreadcrumb(doc),
 			};
 			return product;
@@ -73,7 +66,7 @@ namespace ToysRuParser
 		private static decimal ExtractPrices(IElement doc, string className)
 		{
 			IElement? priceMarkup = doc.QuerySelector(className) ??
-				throw new KeyNotFoundException("Product price with className {} is not found");
+				throw new KeyNotFoundException($"Product price with className {className} is not found");
 			string price = priceMarkup.TextContent;
 
 			// С помощью LINQ и регулярных выражений получаем только числа из строки
@@ -85,18 +78,6 @@ namespace ToysRuParser
 			return Convert.ToDecimal(price, new CultureInfo("en-US"));
 		}
 
-		/// <summary>
-		/// Ищет наличие товара и возвращает булевое значение
-		/// </summary>
-		/// <param name="doc"></param>
-		/// <returns></returns>
-		private static bool CheckingToyAvailable(IElement doc)
-		{
-			// Я решил что лучше искать наличие по его отсутствует, поэтому идет поиск 
-			// по html тегу, который появляется если товар отсутствует
-			IElement? available = doc.QuerySelector(_available);
-			return available is null;
-		}
 
 		/// <summary>
 		/// Находит "хлебные крошки" в документе

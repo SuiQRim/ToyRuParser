@@ -11,7 +11,8 @@ namespace ToysRuParser
 		private const string _name = ".content-title";
 		private const string _price = ".price";
 		private const string _oldPrice = ".old-price";
-		private const string _breadcrumbItems = "a.breadcrumb-item";
+		private const string _breadcrumbItems = ".breadcrumb-item a";
+		private const char _separator = '>';
 
 		public static Product Parse(IElement? doc)
 		{
@@ -19,11 +20,9 @@ namespace ToysRuParser
 			if (doc is null)
 				throw new DocumentNullException("Страница продукта не загрузилась");
 
-
 			// С текущей ценой проблем не должно быть, а старой цены может не быть
 			// Поэтому в случае, если исключение, которое возникает если не найдено значение
 			// Присваиваем текущую цену
-			//
 
 			decimal oldPrice;
 			decimal price = ExtractPrices(doc, _price);
@@ -86,14 +85,12 @@ namespace ToysRuParser
 		/// <returns></returns>
 		private static string ExtractBreadcrumb(IElement doc)
 		{
-
 			//Находим все заголовки разделов
 			//С помощью LINQ получаем массив значений и потом объединяем разделяя все нужным знаком
-			//добавляем в конце название товара (не уверен что название товара так нужно поэтому закомментировал)
 
 			var breadcrumb = doc.QuerySelectorAll(_breadcrumbItems);
 			string?[] titles = breadcrumb.Select(s => s.GetAttribute("title")).ToArray();
-			return string.Join(" > ", titles) /* + " > " + doc.QuerySelector(_name).TextContent  */;
+			return string.Join($" {_separator} ", titles);
 		}
 	}
 }

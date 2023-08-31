@@ -5,7 +5,7 @@
         public CatalogSetting(string link)
         {
 			Link = link;
-			PaginateCountLink = Flurl.Url.Combine(Link + $"/?{_productCount}={_productCountValue}");
+			PaginateCountLink = Flurl.Url.Combine(Link + $"?{_productCount}={_productCountValue}");
 		}
 
 		public readonly string Link;
@@ -19,7 +19,7 @@
 
 		public string GetParametrizeUrl(int pageIndex) {
 
-			return Flurl.Url.Combine(Link, $"/?{_productCount}={_productCountValue}&{_pageIndex}={pageIndex}");
+			return Flurl.Url.Combine(Link, $"?{_productCount}={_productCountValue}&{_pageIndex}={pageIndex}");
 		}
 	}
 }
